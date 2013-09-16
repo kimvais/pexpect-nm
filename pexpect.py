@@ -87,14 +87,13 @@ A critical module was not found. Probably this operating system does not
 support it. Pexpect is intended for UNIX-like operating systems.''')
 
 __version__ = '2.6'
-__revision__ = '1'
+__revision__ = '2'
 __all__ = ['ExceptionPexpect', 'EOF', 'TIMEOUT', 'spawn', 'run', 'which',
-    'split_command_line', '__version__', '__revision__']
+           'split_command_line', '__version__', '__revision__']
 
 
 # Exception classes used by this module.
 class ExceptionPexpect(Exception):
-
     '''Base class for all exceptions raised by this module.
     '''
 
@@ -129,13 +128,11 @@ class ExceptionPexpect(Exception):
 
 
 class EOF(ExceptionPexpect):
-
     '''Raised when EOF is read from a child.
     This usually means the child has exited.'''
 
 
 class TIMEOUT(ExceptionPexpect):
-
     '''Raised when a read time exceeds the timeout. '''
 
 ##class TIMEOUT_PATTERN(TIMEOUT):
@@ -150,7 +147,6 @@ class TIMEOUT(ExceptionPexpect):
 
 def run(command, timeout=-1, withexitstatus=False, events=None,
         extra_args=None, logfile=None, cwd=None, env=None):
-
     '''
     This function runs the given command; waits for it to finish; then
     returns all output as a string. STDERR is included in output. If the full
@@ -229,7 +225,7 @@ def run(command, timeout=-1, withexitstatus=False, events=None,
         child = spawn(command, maxread=2000, logfile=logfile, cwd=cwd, env=env)
     else:
         child = spawn(command, timeout=timeout, maxread=2000, logfile=logfile,
-                cwd=cwd, env=env)
+                      cwd=cwd, env=env)
     if events is not None:
         patterns = list(events.keys())
         responses = list(events.values())
@@ -275,12 +271,12 @@ def run(command, timeout=-1, withexitstatus=False, events=None,
 
 
 class spawn(object):
-
     '''This is the main class interface for Pexpect. Use this class to start
     and control child applications. '''
 
     def __init__(self, command, args=[], timeout=30, maxread=2000,
-        searchwindowsize=None, logfile=None, cwd=None, env=None):
+                 searchwindowsize=None, logfile=None, cwd=None, env=None,
+                 ignore_sighup=False):
 
         '''This is the constructor. The command parameter may be a string that
         includes a command and any arguments to the command. For example::
@@ -440,6 +436,7 @@ class spawn(object):
         self.closed = True
         self.cwd = cwd
         self.env = env
+        self.ignore_sighup = ignore_sighup
         # This flags if we are running on irix
         self.__irix_hack = (sys.platform.lower().find('irix') >= 0)
         # Solaris uses internal __fork_pty(). All others use pty.fork().
@@ -527,9 +524,9 @@ class spawn(object):
         # If command is an int type then it may represent a file descriptor.
         if isinstance(command, type(0)):
             raise ExceptionPexpect('Command is an int type. ' +
-                    'If this is a file descriptor then maybe you want to ' +
-                    'use fdpexpect.fdspawn which takes an existing ' +
-                    'file descriptor instead of a command string.')
+                                   'If this is a file descriptor then maybe you want to ' +
+                                   'use fdpexpect.fdspawn which takes an existing ' +
+                                   'file descriptor instead of a command string.')
 
         if not isinstance(args, type([])):
             raise TypeError('The argument, args, must be a list.')
@@ -546,7 +543,7 @@ class spawn(object):
         command_with_path = which(self.command)
         if command_with_path is None:
             raise ExceptionPexpect('The command was not found or was not ' +
-                    'executable: %s.' % self.command)
+                                   'executable: %s.' % self.command)
         self.command = command_with_path
         self.args[0] = self.command
 
@@ -576,7 +573,7 @@ class spawn(object):
                 # are very picky about window size.
                 # This is a serious limitation, but not a show stopper.
                 pass
-            # Do not allow child to inherit open file descriptors from parent.
+                # Do not allow child to inherit open file descriptors from parent.
             max_fd = resource.getrlimit(resource.RLIMIT_NOFILE)[0]
             for i in range(3, max_fd):
                 try:
@@ -584,10 +581,8 @@ class spawn(object):
                 except OSError:
                     pass
 
-            # I don't know why this works, but ignoring SIGHUP fixes a
-            # problem when trying to start a Java daemon with sudo
-            # (specifically, Tomcat).
-            signal.signal(signal.SIGHUP, signal.SIG_IGN)
+            if self.ignore_sighup:
+                signal.signal(signal.SIGHUP, signal.SIG_IGN)
 
             if self.cwd is not None:
                 os.chdir(self.cwd)
@@ -665,7 +660,7 @@ class spawn(object):
             if fd >= 0:
                 os.close(fd)
                 raise ExceptionPexpect('Failed to disconnect from ' +
-                    'controlling tty. It is still possible to open /dev/tty.')
+                                       'controlling tty. It is still possible to open /dev/tty.')
         except:
             # Good! We are disconnected from a controlling tty.
             pass
@@ -804,7 +799,7 @@ class spawn(object):
             attr[3] = attr[3] | termios.ECHO
         else:
             attr[3] = attr[3] & ~termios.ECHO
-        # I tried TCSADRAIN and TCSAFLUSH, but
+            # I tried TCSADRAIN and TCSAFLUSH, but
         # these were inconsistent and blocked on some platforms.
         # TCSADRAIN would probably be ideal if it worked.
         termios.tcsetattr(self.child_fd, termios.TCSANOW, attr)
@@ -935,7 +930,7 @@ class spawn(object):
 
         if size == 0:
             return ''
-        # delimiter default is EOF
+            # delimiter default is EOF
         index = self.expect(['\r\n', self.delimiter])
         if index == 0:
             return self.before + '\r\n'
@@ -950,15 +945,15 @@ class spawn(object):
         #return iter(self)
         return iter(self.readline, '')
 
-#    def __next__(self):
-#
-#        '''This is to support iterators over a file-like object.
-#        '''
-#
-#        result = self.readline()
-#        if result == '':
-#            raise StopIteration
-#        return result
+    #    def __next__(self):
+    #
+    #        '''This is to support iterators over a file-like object.
+    #        '''
+    #
+    #        result = self.readline()
+    #        if result == '':
+    #            raise StopIteration
+    #        return result
 
     def readlines(self, sizehint=-1):
 
@@ -1035,12 +1030,12 @@ class spawn(object):
             a = a - ord('a') + 1
             return self.send(chr(a))
         d = {'@': 0, '`': 0,
-            '[': 27, '{': 27,
-            '\\': 28, '|': 28,
-            ']': 29, '}': 29,
-            '^': 30, '~': 30,
-            '_': 31,
-            '?': 127}
+             '[': 27, '{': 27,
+             '\\': 28, '|': 28,
+             ']': 29, '}': 29,
+             '^': 30, '~': 30,
+             '_': 31,
+             '?': 127}
         if char not in d:
             return 0
         return self.send(chr(d[char]))
@@ -1165,8 +1160,8 @@ class spawn(object):
         elif os.WIFSTOPPED(status):
             # You can't call wait() on a child process in the stopped state.
             raise ExceptionPexpect('Called wait() on a stopped child ' +
-                    'process. This is not supported. Is some other ' +
-                    'process attempting job control with our child pid?')
+                                   'process. This is not supported. Is some other ' +
+                                   'process attempting job control with our child pid?')
         return self.exitstatus
 
     def isalive(self):
@@ -1195,9 +1190,9 @@ class spawn(object):
             # No child processes
             if e[0] == errno.ECHILD:
                 raise ExceptionPexpect('isalive() encountered condition ' +
-                        'where "terminated" is 0, but there was no child ' +
-                        'process. Did someone else call waitpid() ' +
-                        'on our process?')
+                                       'where "terminated" is 0, but there was no child ' +
+                                       'process. Did someone else call waitpid() ' +
+                                       'on our process?')
             else:
                 raise e
 
@@ -1213,9 +1208,9 @@ class spawn(object):
                 # This should never happen...
                 if e[0] == errno.ECHILD:
                     raise ExceptionPexpect('isalive() encountered condition ' +
-                            'that should never happen. There was no child ' +
-                            'process. Did someone else call waitpid() ' +
-                            'on our process?')
+                                           'that should never happen. There was no child ' +
+                                           'process. Did someone else call waitpid() ' +
+                                           'on our process?')
                 else:
                     raise e
 
@@ -1242,9 +1237,9 @@ class spawn(object):
             self.terminated = True
         elif os.WIFSTOPPED(status):
             raise ExceptionPexpect('isalive() encountered condition ' +
-                    'where child process is stopped. This is not ' +
-                    'supported. Is some other process attempting ' +
-                    'job control with our child pid?')
+                                   'where child process is stopped. This is not ' +
+                                   'supported. Is some other process attempting ' +
+                                   'job control with our child pid?')
         return False
 
     def kill(self, sig):
@@ -1303,8 +1298,8 @@ class spawn(object):
                 compiled_pattern_list.append(p)
             else:
                 raise TypeError('Argument must be one of StringTypes, ' +
-                        'EOF, TIMEOUT, SRE_Pattern, or a list of those ' +
-                        'type. %s' % str(type(p)))
+                                'EOF, TIMEOUT, SRE_Pattern, or a list of those ' +
+                                'type. %s' % str(type(p)))
 
         return compiled_pattern_list
 
@@ -1387,7 +1382,7 @@ class spawn(object):
 
         compiled_pattern_list = self.compile_pattern_list(pattern)
         return self.expect_list(compiled_pattern_list,
-                timeout, searchwindowsize)
+                                timeout, searchwindowsize)
 
     def expect_list(self, pattern_list, timeout=-1, searchwindowsize=-1):
 
@@ -1402,7 +1397,7 @@ class spawn(object):
         self.searchwindowsize value is used. '''
 
         return self.expect_loop(searcher_re(pattern_list),
-                timeout, searchwindowsize)
+                                timeout, searchwindowsize)
 
     def expect_exact(self, pattern_list, timeout=-1, searchwindowsize=-1):
 
@@ -1419,10 +1414,10 @@ class spawn(object):
         escaping regular expression characters that you want to match.'''
 
         if (type(pattern_list) in types.StringTypes or
-            pattern_list in (TIMEOUT, EOF)):
+                    pattern_list in (TIMEOUT, EOF)):
             pattern_list = [pattern_list]
         return self.expect_loop(searcher_string(pattern_list),
-                timeout, searchwindowsize)
+                                timeout, searchwindowsize)
 
     def expect_loop(self, searcher, timeout=-1, searchwindowsize=-1):
 
@@ -1454,10 +1449,10 @@ class spawn(object):
                     self.match = searcher.match
                     self.match_index = index
                     return self.match_index
-                # No match at this point
+                    # No match at this point
                 if timeout < 0 and timeout is not None:
                     raise TIMEOUT('Timeout exceeded in expect_any().')
-                # Still have time left, so read more data
+                    # Still have time left, so read more data
                 c = self.read_nonblocking(self.maxread, timeout)
                 freshlen = len(c)
                 time.sleep(0.0001)
@@ -1527,12 +1522,12 @@ class spawn(object):
         if TIOCSWINSZ == 2148037735:
             # Same bits, but with sign.
             TIOCSWINSZ = -2146929561
-        # Note, assume ws_xpixel and ws_ypixel are zero.
+            # Note, assume ws_xpixel and ws_ypixel are zero.
         s = struct.pack('HHHH', rows, cols, 0, 0)
         fcntl.ioctl(self.fileno(), TIOCSWINSZ, s)
 
     def interact(self, escape_character=chr(29),
-            input_filter=None, output_filter=None):
+                 input_filter=None, output_filter=None):
 
         '''This gives control of the child process to the interactive user (the
         human at the keyboard). Keystrokes are sent to the child process, and
@@ -1597,7 +1592,7 @@ class spawn(object):
         return os.read(fd, 1000)
 
     def __interact_copy(self, escape_character=None,
-            input_filter=None, output_filter=None):
+                        input_filter=None, output_filter=None):
 
         '''This is used by the interact() method.
         '''
@@ -1644,14 +1639,14 @@ class spawn(object):
                     if timeout is not None:
                         timeout = end_time - time.time()
                         if timeout < 0:
-                            return([], [], [])
+                            return ([], [], [])
                 else:
                     # something else caused the select.error, so
                     # this actually is an exception.
                     raise
 
-##############################################################################
-# The following methods are no longer supported or allowed.
+                ##############################################################################
+                # The following methods are no longer supported or allowed.
 
     def setmaxread(self, maxread):
 
@@ -1659,8 +1654,8 @@ class spawn(object):
         and setters without a good reason. '''
 
         raise ExceptionPexpect('This method is no longer supported ' +
-                'or allowed. Just assign a value to the ' +
-                'maxread member variable.')
+                               'or allowed. Just assign a value to the ' +
+                               'maxread member variable.')
 
     def setlog(self, fileobject):
 
@@ -1668,8 +1663,8 @@ class spawn(object):
         '''
 
         raise ExceptionPexpect('This method is no longer supported ' +
-                'or allowed. Just assign a value to the logfile ' +
-                'member variable.')
+                               'or allowed. Just assign a value to the logfile ' +
+                               'member variable.')
 
 ##############################################################################
 # End of spawn class
@@ -1677,7 +1672,6 @@ class spawn(object):
 
 
 class searcher_string(object):
-
     '''This is a plain string search helper for the spawn.expect_any() method.
     This helper class is for speed. For more powerful regex patterns
     see the helper class, searcher_re.
@@ -1724,7 +1718,7 @@ class searcher_string(object):
             ss.append((self.eof_index, '    %d: EOF' % self.eof_index))
         if self.timeout_index >= 0:
             ss.append((self.timeout_index,
-                '    %d: TIMEOUT' % self.timeout_index))
+                       '    %d: TIMEOUT' % self.timeout_index))
         ss.sort()
         ss = zip(*ss)[1]
         return '\n'.join(ss)
@@ -1777,7 +1771,6 @@ class searcher_string(object):
 
 
 class searcher_re(object):
-
     '''This is regular expression string search helper for the
     spawn.expect_any() method. This helper class is for powerful
     pattern matching. For speed, see the helper class, searcher_string.
@@ -1820,13 +1813,13 @@ class searcher_re(object):
         the object.'''
 
         ss = [(n, '    %d: re.compile("%s")' %
-            (n, str(s.pattern))) for n, s in self._searches]
+                  (n, str(s.pattern))) for n, s in self._searches]
         ss.append((-1, 'searcher_re:'))
         if self.eof_index >= 0:
             ss.append((self.eof_index, '    %d: EOF' % self.eof_index))
         if self.timeout_index >= 0:
             ss.append((self.timeout_index, '    %d: TIMEOUT' %
-                self.timeout_index))
+                                           self.timeout_index))
         ss.sort()
         ss = zip(*ss)[1]
         return '\n'.join(ss)
@@ -1868,7 +1861,6 @@ class searcher_re(object):
 
 
 def which(filename):
-
     '''This takes a given filename; tries to find it in the environment path;
     then checks if it is executable. This returns the full path to the filename
     if found and executable. Otherwise this returns None.'''
@@ -1890,7 +1882,6 @@ def which(filename):
 
 
 def split_command_line(command_line):
-
     '''This splits a command line into a list of arguments. It splits arguments
     on spaces, but handles embedded quotes, doublequotes, and escaped
     characters. It's impossible to do this with a regular expression, so I
