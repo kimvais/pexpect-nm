@@ -63,6 +63,8 @@ PEXPECT LICENSE
 
 '''
 
+raise DeprecationWarning("pexpect-nm 2.6 is a deprecated project, use https://github.com/pexpect/pexpect instead!")
+
 try:
     import os
     import sys
