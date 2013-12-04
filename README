@@ -1,3 +1,10 @@
+pexpect-nm is DEPRECATED
+========================
+
+Please use the pexpect 3.x instead, https://github.com/pexpect/pexpect
+
+
+
 Pexpect is a Pure Python Expect-like module
 
 Pexpect makes Python a better tool for controlling other applications.
